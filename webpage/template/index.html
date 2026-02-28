@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark Minimalist Design</title>
+  <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', 'Open Sans', sans-serif;
+    }
+
+    body {
+      background-color: #1e1e2c;
+      color: #e0e0e0;
+      line-height: 1.6;
+    }
+
+    /* Hero Section */
+    .hero {
+      background-color: #252538;
+      padding: 4rem 2rem;
+      text-align: center;
+      border-bottom: 1px solid rgba(100, 100, 120, 0.3);
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1.2rem;
+      color: #e0e0e0;
+    }
+
+    .hero p {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: #e0e0e0;
+      max-width: 700px;
+      margin: 0 auto 2rem;
+      line-height: 1.7;
+      opacity: 0.95;
+    }
+
+    .btn {
+      display: inline-block;
+      background-color: #6a9bc8;
+      color: #1e1e2c;
+      padding: 0.8rem 1.8rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #5a8bc8;
+      transform: translateY(-2px);
+    }
+
+    /* Main Content */
+    main {
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 0 2rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .card {
+      background-color: #2d2d3d;
+      border-radius: 8px;
+      padding: 1.8rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(100, 100, 120, 0.3);
+      transition: all 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      border-color: #6a9bc8;
+    }
+
+    .card h3 {
+      margin-bottom: 1.2rem;
+      color: #6a9bc8;
+      font-size: 1.4rem;
+    }
+
+    .card p {
+      color: #a0a0a0;
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    footer {
+      background-color: #252538;
+      padding: 2rem 0;
+      border-top: 1px solid rgba(100, 100, 120, 0.3);
+      margin-top: 3rem;
+      text-align: center;
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .footer-container p {
+      color: #a0a0a0;
+      margin-bottom: 0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .hero {
+        padding: 3rem 1rem;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .hero p {
+        font-size: 1.15rem;
+        line-height: 1.6;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero Section -->
+  <section class="hero">
+    <h1>Dark Minimalist Design</h1>
+    <p>A distraction-free experience with high contrast and elegant typography, designed to put your content first without compromising readability or style.</p>
+    <a href="#" class="btn">Explore More</a>
+  </section>
+
+  <!-- Main Content -->
+  <main>
+    <div class="cards">
+      <div class="card">
+        <h3>Readability</h3>
+        <p>Optimized for low-light environments with carefully chosen colors and spacing.</p>
+      </div>
+      <div class="card">
+        <h3>Simplicity</h3>
+        <p>Clean layouts and minimal elements ensure your content takes center stage.</p>
+      </div>
+      <div class="card">
+        <h3>Responsiveness</h3>
+        <p>Fully adaptive to all screen sizes, from mobile to desktop.</p>
+      </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <p>&copy; 2026 DarkMinimal. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>

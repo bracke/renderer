@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CSS Rectangle Reference Images</title>
+<style>
+body {
+    font-family: sans-serif;
+    background: white;
+    padding: 20px;
+}
+.rectangle-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    margin-bottom: 40px;
+}
+.rectangle-container {
+    margin-right: 20px;
+    margin-bottom: 20px;
+}
+.rectangle-label, .rectangle-call {
+    display: block;
+    margin-bottom: 5px;
+    word-break: break-word;
+}
+.rectangle {
+    width: 200px;
+    height: 100px;
+    background: lightgray;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+}
+</style>
+</head>
+<body>
+
+<h1>CSS Rectangle Reference Images</h1>
+
+<!-- Rectangle 1 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 1</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=10, Y=10, Width=200, Height=100, Radius_TL=10, Radius_TR=10, Radius_BR=10, Radius_BL=10, Fill_Gradient=linear(red→yellow), Border_Color=black, Border_Size=2, Shadow_Color=rgba(0,0,0,0.3), Shadow_Offset_X=5, Shadow_Offset_Y=5, Shadow_Blur=10)
+        </span>
+        <div class="rectangle" id="rect1" style="
+            border-radius: 10px 10px 10px 10px;
+            background: linear-gradient(90deg, red 0%, yellow 100%);
+            border: 2px solid black;
+            box-shadow: 5px 5px 10px rgba(0,0,0,0.3);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 2 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 2</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=20, Y=20, Width=200, Height=100, Radius_TL=20, Radius_TR=20, Radius_BR=0, Radius_BL=0, Fill_Gradient=radial(orange→purple), Border_Color=black, Border_Size=3, Shadow_Color=rgba(0,0,0,0.4), Shadow_Offset_X=6, Shadow_Offset_Y=6, Shadow_Blur=12)
+        </span>
+        <div class="rectangle" id="rect2" style="
+            border-radius: 20px 20px 0 0;
+            background: radial-gradient(circle at center, orange 0%, purple 100%);
+            border: 3px solid black;
+            box-shadow: 6px 6px 12px rgba(0,0,0,0.4);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 3 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 3</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=30, Y=30, Width=200, Height=100, Radius_TL=0, Radius_TR=30, Radius_BR=30, Radius_BL=0, Fill_Gradient=linear(cyan→blue at 45deg), Border_Color=black, Border_Size=4, Shadow_Color=rgba(0,0,0,0.5), Shadow_Offset_X=8, Shadow_Offset_Y=8, Shadow_Blur=15)
+        </span>
+        <div class="rectangle" id="rect3" style="
+            border-radius: 0 30px 30px 0;
+            background: linear-gradient(45deg, cyan 0%, blue 100%);
+            border: 4px solid black;
+            box-shadow: 8px 8px 15px rgba(0,0,0,0.5);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 4 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 4</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=40, Y=40, Width=200, Height=100, Radius_TL=25, Radius_TR=0, Radius_BR=25, Radius_BL=0, Fill_Gradient=conic(pink→purple), Border_Color=black, Border_Size=5, Shadow_Color=rgba(0,0,0,0.35), Shadow_Offset_X=7, Shadow_Offset_Y=7, Shadow_Blur=14)
+        </span>
+        <div class="rectangle" id="rect4" style="
+            border-radius: 25px 0 25px 0;
+            background: conic-gradient(from 0deg at 50% 50%, pink 0%, purple 100%);
+            border: 5px solid black;
+            box-shadow: 7px 7px 14px rgba(0,0,0,0.35);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 5 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 5</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=50, Y=50, Width=200, Height=100, Radius_TL=30, Radius_TR=30, Radius_BR=30, Radius_BL=30, Fill_Gradient=linear(orange→purple at 60deg), Border_Color=black, Border_Size=6, Shadow_Color=rgba(0,0,0,0.5), Shadow_Offset_X=8, Shadow_Offset_Y=8, Shadow_Blur=12)
+        </span>
+        <div class="rectangle" id="rect5" style="
+            border-radius: 30px;
+            background: linear-gradient(60deg, orange 0%, purple 100%);
+            border: 6px solid black;
+            box-shadow: 8px 8px 12px rgba(0,0,0,0.5);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 6 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 6</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=60, Y=60, Width=200, Height=100, Radius_TL=15, Radius_TR=15, Radius_BR=15, Radius_BL=15, Fill_Gradient=linear(green→lime), Border_Color=black, Border_Size=3, Shadow_Color=rgba(0,0,0,0.3), Shadow_Offset_X=5, Shadow_Offset_Y=5, Shadow_Blur=8)
+        </span>
+        <div class="rectangle" id="rect6" style="
+            border-radius: 15px;
+            background: linear-gradient(to bottom, green 0%, lime 100%);
+            border: 3px solid black;
+            box-shadow: 5px 5px 8px rgba(0,0,0,0.3);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 7 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 7</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=70, Y=70, Width=200, Height=100, Radius_TL=0, Radius_TR=0, Radius_BR=20, Radius_BL=20, Fill_Gradient=linear(yellow→orange at 135deg), Border_Color=black, Border_Size=2, Shadow_Color=rgba(0,0,0,0.25), Shadow_Offset_X=4, Shadow_Offset_Y=4, Shadow_Blur=10)
+        </span>
+        <div class="rectangle" id="rect7" style="
+            border-radius: 0 0 20px 20px;
+            background: linear-gradient(135deg, yellow 0%, orange 100%);
+            border: 2px solid black;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.25);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 8 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 8</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=80, Y=80, Width=200, Height=100, Radius_TL=10, Radius_TR=20, Radius_BR=30, Radius_BL=40, Fill_Gradient=linear(teal→cyan), Border_Color=black, Border_Size=3, Shadow_Color=rgba(0,0,0,0.4), Shadow_Offset_X=6, Shadow_Offset_Y=6, Shadow_Blur=12)
+        </span>
+        <div class="rectangle" id="rect8" style="
+            border-radius: 10px 20px 30px 40px;
+            background: linear-gradient(to right, teal 0%, cyan 100%);
+            border: 3px solid black;
+            box-shadow: 6px 6px 12px rgba(0,0,0,0.4);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 9 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 9</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=90, Y=90, Width=200, Height=100, Radius_TL=20, Radius_TR=20, Radius_BR=20, Radius_BL=20, Fill_Gradient=radial(violet→indigo), Border_Color=black, Border_Size=4, Shadow_Color=rgba(0,0,0,0.45), Shadow_Offset_X=7, Shadow_Offset_Y=7, Shadow_Blur=15)
+        </span>
+        <div class="rectangle" id="rect9" style="
+            border-radius: 20px;
+            background: radial-gradient(circle at center, violet 0%, indigo 100%);
+            border: 4px solid black;
+            box-shadow: 7px 7px 15px rgba(0,0,0,0.45);
+        "></div>
+    </div>
+</div>
+
+<!-- Rectangle 10 -->
+<div class="rectangle-wrapper">
+    <div class="rectangle-container">
+        <span class="rectangle-label">Rectangle 10</span>
+        <span class="rectangle-call">
+Draw_Rounded_Rectangle(Context, X=100, Y=100, Width=200, Height=100, Radius_TL=25, Radius_TR=10, Radius_BR=25, Radius_BL=10, Fill_Gradient=linear(magenta→pink at 225deg), Border_Color=black, Border_Size=5, Shadow_Color=rgba(0,0,0,0.5), Shadow_Offset_X=8, Shadow_Offset_Y=8, Shadow_Blur=14)
+        </span>
+        <div class="rectangle" id="rect10" style="
+            border-radius: 25px 10px 25px 10px;
+            background: linear-gradient(225deg, magenta 0%, pink 100%);
+            border: 5px solid black;
+            box-shadow: 8px 8px 14px rgba(0,0,0,0.5);
+        "></div>
+    </div>
+</div>
+
+</body>
+</html>
