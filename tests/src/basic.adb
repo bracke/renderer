@@ -2,6 +2,7 @@ with AUnit.Assertions;     use AUnit.Assertions;
 with Renderer;             use Renderer;
 with Renderer.Rectangle;   use Renderer.Rectangle;
 with Renderer.Gradients;   use Renderer.Gradients;
+with Renderer.Gradients.Constants;
 with Interfaces;
 with Renderer.Colors;      use Renderer.Colors;
 with Framebuffer;          use Framebuffer;
@@ -21,7 +22,7 @@ package body Basic is
 
       Context : Render_Context (63, 63);
 
-      Fill : constant Gradient (1) :=
+      G : constant Gradient (1) :=
        (Stop_Count => 1,
          Kind  => Solid,
          Stops => [1 => (Position => 0.0,
@@ -57,12 +58,17 @@ package body Basic is
 
       Draw_Rounded_Rectangle
          (Context         => Context,
-         X               => 10,
-         Y               => 10,
-         Width           => 20,
-         Height          => 20,
-         Fill_Gradient   => Fill,
-         Border_Color    => Transparent);
+          Geometry       => (X => 10, Y => 10, Width => 20, Height => 20),
+          Style    =>
+           Rectangle_Style'
+             (Shadow_Count => 0,
+              Gradient_Count => 1,
+              Fill         => G,
+              Border       => Border_Style'(Renderer.Colors.Transparent, 0),
+              Radii        => (40, 40, 40, 40),
+              Shadows      => Empty_Shadow_Array,
+              others => <>
+            ));
 
       -------------------------------------------------
       --  Assertions

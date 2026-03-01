@@ -1,11 +1,11 @@
-with AUnit.Assertions;              use AUnit.Assertions;
+with AUnit.Assertions;             use AUnit.Assertions;
 with Ada.Text_IO;
-with Renderer;                      use Renderer;
-with Renderer.Rectangle;            use Renderer.Rectangle;
-with Renderer.Gradients;            use Renderer.Gradients;
-with Renderer.Colors;               use Renderer.Colors;
-with Framebuffer;                   use Framebuffer;
-with Renderer.Gradients.Constants;  use Renderer.Gradients.Constants;
+with Renderer;                     use Renderer;
+with Renderer.Rectangle;           use Renderer.Rectangle;
+with Renderer.Colors;              use Renderer.Colors;
+with Renderer.Gradients;           use Renderer.Gradients;
+with Renderer.Gradients.Constants; use Renderer.Gradients.Constants;
+with Framebuffer;                  use Framebuffer;
 with IO;
 
 package body Rounded_Rectangle_2 is
@@ -16,7 +16,7 @@ package body Rounded_Rectangle_2 is
    function Name (T : Test) return AUnit.Message_String is
       pragma Unreferenced (T);
    begin
-      return AUnit.Format ("Rounded rectangle #1");
+      return AUnit.Format ("Rounded rectangle #2");
    end Name;
 
    overriding
@@ -67,149 +67,191 @@ package body Rounded_Rectangle_2 is
       C.Clear;
       Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
 
-      --------------------------------
-      --  1. Solid rectangle
-      --------------------------------
+      --  Solid rectangle with shadow
       Draw_Rounded_Rectangle
         (C,
-         10, 10, 80, 40,
-         0, 0, 0, 0,
-         Solid_Red,
-         Black,
-         2,
-         Shadows => (1 => (Offset_X => 2,
-                           Offset_Y => 2,
-                           Blur     => 4,
-                           Spread   => 0,
-                           Inset    => False,
-                           Color    => (0,0,0,80))) );
+         Geometry => (X => 10, Y => 10, Width => 80, Height => 40),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 1,
+              Shadow_Count   => 1,
+              Fill           => Solid_Red,
+              Border         => Border_Style'(Black, 1),
+              Radii          => (0, 0, 0, 0),
+              Shadows        =>
+                [1 =>
+                   (Offset_X => 2,
+                    Offset_Y => 2,
+                    Blur     => 4,
+                    Spread   => 0,
+                    Inset    => False,
+                    Color    => (0, 0, 0, 80))]));
 
-      ------------------------------------------------
-      --  2. Linear gradient horizontal, no border
-      ------------------------------------------------
+      --  Linear gradient, no shadow
       Draw_Rounded_Rectangle
         (C,
-         110, 10, 100, 40,
-         5, 5, 5, 5,
-         Linear_RG,
-         Transparent,
-         0,
-         Shadows => Empty_Shadow_Array);
+         Geometry => (X => 110, Y => 10, Width => 100, Height => 40),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 2,
+              Shadow_Count   => 0,
+              Fill           => Linear_RG,
+              Border         => Border_Style'(Transparent, 1),
+              Radii          => (5, 5, 5, 5),
+              Shadows        => Empty_Shadow_Array));
 
-      -----------------------------------
-      --  3. Radial gradient with border
-      -----------------------------------
+      --  Radial gradient with shadow
       Draw_Rounded_Rectangle
         (C,
-         10, 60, 80, 80,
-         20, 20, 20, 20,
-         Radial_Blue,
-         Black,
-         3,
-         Shadows => (1 => (Offset_X => 4,
-                           Offset_Y => 4,
-                           Blur     => 6,
-                           Spread   => 0,
-                           Inset    => False,
-                           Color    => (0,0,0,100))) );
+         Geometry => (X => 10, Y => 60, Width => 80, Height => 80),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 2,
+              Shadow_Count   => 1,
+              Fill           => Radial_Blue,
+              Border         => Border_Style'(Black, 1),
+              Radii          => (20, 20, 20, 20),
+              Shadows        =>
+                [1 =>
+                   (Offset_X => 4,
+                    Offset_Y => 4,
+                    Blur     => 6,
+                    Spread   => 0,
+                    Inset    => False,
+                    Color    => (0, 0, 0, 100))]));
 
-      --------------------------------------
-      --  4. Conic gradient with repeating
-      --------------------------------------
+      --  Conic gradient with shadow
       Draw_Rounded_Rectangle
         (C,
-         110, 60, 100, 100,
-         10, 30, 50, 0,
-         Conic_Gradient,
-         Black,
-         2,
-         Shadows => (1 => (Offset_X => 0,
-                           Offset_Y => 4,
-                           Blur     => 8,
-                           Spread   => 0,
-                           Inset    => False,
-                           Color    => (0,0,0,50))) );
+         Geometry => (X => 110, Y => 60, Width => 100, Height => 100),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 4,
+              Shadow_Count   => 1,
+              Fill           => Conic_Gradient,
+              Border         => Border_Style'(Black, 1),
+              Radii          => (10, 30, 50, 0),
+              Shadows        =>
+                [1 =>
+                   (Offset_X => 0,
+                    Offset_Y => 4,
+                    Blur     => 8,
+                    Spread   => 0,
+                    Inset    => False,
+                    Color    => (0, 0, 0, 50))]));
 
-      -------------------------------------
-      --  5. Zero-width/height rectangles
-      -------------------------------------
-      Draw_Rounded_Rectangle(C, 10, 160, 0, 50, 0, 0, 0, 0, Solid_Red, Black, 2,
-                             Shadows => Empty_Shadow_Array);
-      Draw_Rounded_Rectangle(C, 10, 160, 50, 0, 0, 0, 0, 0, Solid_Red, Black, 2,
-                             Shadows => Empty_Shadow_Array);
-
-      ---------------------------------------
-      --  6. Max radius rectangle (circle)
-      ---------------------------------------
+      --  Zero-width/height rectangles, no shadow
       Draw_Rounded_Rectangle
         (C,
-         200, 180, 60, 60,
-         30, 30, 30, 30,
-         Solid_Red,
-         Black,
-         2,
-         Shadows => (1 => (Offset_X => 3,
-                           Offset_Y => 3,
-                           Blur     => 10,
-                           Spread   => 0,
-                           Inset    => False,
-                           Color    => (0,0,0,120))) );
-
-      --------------------------------
-      --  7. Overlapping rectangles
-      --------------------------------
+         Geometry => (X => 10, Y => 160, Width => 0, Height => 50),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 1,
+              Shadow_Count   => 0,
+              Fill           => Solid_Red,
+              Border         => Border_Style'(Black, 1),
+              Shadows        => Empty_Shadow_Array,
+             others => <>
+            )
+         );
       Draw_Rounded_Rectangle
         (C,
-         300, 10, 120, 80,
-         10, 10, 10, 10,
-         Linear_RG,
-         Black,
-         2,
-         Shadows => (1 => (Offset_X => 6,
-                           Offset_Y => 6,
-                           Blur     => 8,
-                           Spread   => 0,
-                           Inset    => False,
-                           Color    => (0,0,0,60))) );
+         Geometry => (X => 10, Y => 160, Width => 50, Height => 0),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 1,
+              Shadow_Count   => 0,
+              Fill           => Solid_Red,
+              Border         => Border_Style'(Black, 1),
+              Shadows        => Empty_Shadow_Array,
+              others => <>)
+              );
+
+      --  Max radius rectangle (circle) with shadow
+      Draw_Rounded_Rectangle
+        (C,
+         Geometry => (X => 200, Y => 180, Width => 60, Height => 60),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 1,
+              Shadow_Count   => 1,
+              Fill           => Solid_Red,
+              Border         => Border_Style'(Black, 1),
+              Radii          => (30, 30, 30, 30),
+              Shadows        =>
+                [1 =>
+                   (Offset_X => 3,
+                    Offset_Y => 3,
+                    Blur     => 10,
+                    Spread   => 0,
+                    Inset    => False,
+                    Color    => (0, 0, 0, 120))]));
+
+      --  Overlapping rectangles
+      Draw_Rounded_Rectangle
+        (C,
+         Geometry => (X => 300, Y => 10, Width => 120, Height => 80),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 2,
+              Shadow_Count   => 1,
+              Fill           => Linear_RG,
+              Border         => Border_Style'(Black, 1),
+              Radii          => (10, 10, 10, 10),
+              Shadows        =>
+                [1 =>
+                   (Offset_X => 6,
+                    Offset_Y => 6,
+                    Blur     => 8,
+                    Spread   => 0,
+                    Inset    => False,
+                    Color    => (0, 0, 0, 60))]));
 
       Draw_Rounded_Rectangle
         (C,
-         340, 40, 120, 80,
-         10, 10, 10, 10,
-         Radial_Blue,
-         Black,
-         2,
-         Shadows => (1 => (Offset_X => 0,
-                           Offset_Y => 0,
-                           Blur     => 6,
-                           Spread   => 0,
-                           Inset    => False,
-                           Color    => (0,0,0,60))) );
+         Geometry => (X => 340, Y => 40, Width => 120, Height => 80),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 2,
+              Shadow_Count   => 1,
+              Fill           => Radial_Blue,
+              Border         => Border_Style'(Black, 1),
+              Radii          => (10, 10, 10, 10),
+              Shadows        =>
+                [1 =>
+                   (Offset_X => 0,
+                    Offset_Y => 0,
+                    Blur     => 6,
+                    Spread   => 0,
+                    Inset    => False,
+                    Color    => (0, 0, 0, 60))]));
 
-      --------------------------------------------------
-      --  8. Partial alpha rectangle (50% transparent)
-      --------------------------------------------------
+      --  Semi-transparent shadow
       declare
-         Semi_Transparent_Red : constant Pixel := (R => 255, G => 0, B => 0, A => 128);
+         Semi_Transparent_Red : constant Pixel :=
+           (R => 255, G => 0, B => 0, A => 128);
       begin
          Draw_Rounded_Rectangle
            (C,
-            10, 250, 100, 50,
-            10, 10, 10, 10,
-            Solid_Red,
-            Black,
-            2,
-            Shadows => (1 => (Offset_X => 4,
-                              Offset_Y => 4,
-                              Blur     => 6,
-                              Spread   => 0,
-                              Inset    => False,
-                              Color    => Semi_Transparent_Red)) );
+            Geometry => (X => 10, Y => 250, Width => 100, Height => 50),
+            Style    =>
+              Rectangle_Style'
+                (Gradient_Count => 1,
+                 Shadow_Count   => 1,
+                 Fill           => Solid_Red,
+                 Border         => Border_Style'(Black, 1),
+                 Radii          => (10, 10, 10, 10),
+                 Shadows        =>
+                   [1 =>
+                      (Offset_X => 4,
+                       Offset_Y => 4,
+                       Blur     => 6,
+                       Spread   => 0,
+                       Inset    => False,
+                       Color    => Semi_Transparent_Red)]));
       end;
 
-      --------------------------------
-      --  9. Repeating radial gradient
-      --------------------------------
+      --  Repeating radial gradient with shadow
       declare
          Repeating_Radial : constant Gradient :=
            (Kind          => Radial,
@@ -226,35 +268,43 @@ package body Rounded_Rectangle_2 is
       begin
          Draw_Rounded_Rectangle
            (C,
-            150, 250, 100, 100,
-            10, 10, 10, 10,
-            Repeating_Radial,
-            Black,
-            2,
-            Shadows => (1 => (Offset_X => 5,
-                              Offset_Y => 5,
-                              Blur     => 10,
-                              Spread   => 0,
-                              Inset    => False,
-                              Color    => (0,0,0,80))) );
+            Geometry => (X => 150, Y => 250, Width => 100, Height => 100),
+            Style    =>
+              Rectangle_Style'
+                (Gradient_Count => 2,
+                 Shadow_Count   => 1,
+                 Fill           => Repeating_Radial,
+                 Border         => Border_Style'(Black, 1),
+                 Radii          => (10, 10, 10, 10),
+                 Shadows        =>
+                   [1 =>
+                      (Offset_X => 5,
+                       Offset_Y => 5,
+                       Blur     => 10,
+                       Spread   => 0,
+                       Inset    => False,
+                       Color    => (0, 0, 0, 80))]));
       end;
 
-      -----------------------------------------
-      --  10. Extreme clipping (outside buffer)
-      -----------------------------------------
+      --  Extreme clipping rectangle with shadow
       Draw_Rounded_Rectangle
         (C,
-         -50, -50, 100, 100,
-         10, 10, 10, 10,
-         Solid_Red,
-         Black,
-         2,
-         Shadows => (1 => (Offset_X => 4,
-                           Offset_Y => 4,
-                           Blur     => 6,
-                           Spread   => 0,
-                           Inset    => False,
-                           Color    => (0,0,0,100))) );
+         Geometry => (X => -50, Y => -50, Width => 100, Height => 100),
+         Style    =>
+           Rectangle_Style'
+             (Gradient_Count => 1,
+              Shadow_Count   => 1,
+              Fill           => Solid_Red,
+              Border         => Border_Style'(Black, 1),
+              Radii          => (10, 10, 10, 10),
+              Shadows        =>
+                [1 =>
+                   (Offset_X => 4,
+                    Offset_Y => 4,
+                    Blur     => 6,
+                    Spread   => 0,
+                    Inset    => False,
+                    Color    => (0, 0, 0, 100))]));
 
       Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
       IO.Write_PPM (Get_Buffer (C), "output/rounded_rectangle_2.ppm");

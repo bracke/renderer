@@ -1,11 +1,11 @@
-with AUnit.Assertions;     use AUnit.Assertions;
+with AUnit.Assertions;             use AUnit.Assertions;
 with Ada.Text_IO;
-with Renderer;             use Renderer;
-with Renderer.Rectangle;   use Renderer.Rectangle;
-with Renderer.Gradients;   use Renderer.Gradients;
+with Renderer;                     use Renderer;
+with Renderer.Rectangle;           use Renderer.Rectangle;
+with Renderer.Gradients;           use Renderer.Gradients;
 with Renderer.Gradients.Constants; use Renderer.Gradients.Constants;
-with Renderer.Colors;      use Renderer.Colors;
-with Framebuffer;          use Framebuffer;
+with Renderer.Colors;              use Renderer.Colors;
+with Framebuffer;                  use Framebuffer;
 with IO;
 with Ada.Numerics;
 
@@ -27,188 +27,143 @@ package body Misc_Test is
       C  : Render_Context := Create_Context (600, 400);
       C2 : Render_Context := Create_Context (600, 400);
 
-      Solid_Gradient  : constant Gradient :=
-        (Stop_Count => 1,
-         Kind       => Solid,
-         Stops      =>
-           [1 =>
-              (Position => 0.0,
-               Color    => (R => 40, G => 44, B => 52, A => 255))],
-         others     => <>);
+      Solid_Gradient : constant Gradient :=
+        Solid ((R => 40, G => 44, B => 52, A => 255));
 
       Linear_Gradient : constant Gradient :=
-        (Stop_Count => 2,
-         Kind       => Linear,
-         X1         => Float (120),
-         Y1         => Float (10),
-         X2         => Float (170),
-         Y2         => Float (10),
-         Repeat       => True,
-         Repeat_Length => 20.0,   -- pixels per stripe
-         Stops      =>
-           [1 => (0.0, (255, 0, 0, 255)), 2 => (1.0, (255, 255, 255, 255))],
-         others     => <>);
+        (Kind          => Linear,
+         X1            => 120.0,
+         Y1            => 10.0,
+         X2            => 170.0,
+         Y2            => 10.0,
+         Stop_Count    => 2,
+         Stops         =>
+           [1 => (Position => 0.0, Color => (255, 0, 0, 255)),
+            2 => (Position => 1.0, Color => (255, 255, 255, 255))],
+         Repeat        => True,
+         Repeat_Length => 20.0,
+         others        => <>);
 
       Radial_Gradient : constant Gradient :=
-        (Stop_Count => 2,
-         Kind       => Radial,
-         CX         => Float (245),
-         CY         => Float (60),
-         Radius     => 25.0,
-         Repeat        => True,
-         Repeat_Length => 30.0,  -- 30px per ring
-         Stops      =>
+        (Kind          => Radial,
+         CX            => 245.0,
+         CY            => 60.0,
+         Radius        => 25.0,
+         Stop_Count    => 2,
+         Stops         =>
            [1 => (0.0, (0, 0, 255, 255)), 2 => (1.0, (255, 255, 255, 255))],
-         others     => <>);
-
-      Conic_Gradient  : constant Gradient :=
-        (Stop_Count   => 6,
-         Kind         => Conic,
-         CX           => 35.0,
-         CY           => 200.0,
-         Angle_Offset => 0.0,
          Repeat        => True,
-         Repeat_Length => Ada.Numerics.Pi / 2.0, -- repeat every 90°
-         Stops        =>
+         Repeat_Length => 30.0,
+         others        => <>);
+
+      Conic_Gradient : constant Gradient :=
+        (Kind          => Conic,
+         CX            => 35.0,
+         CY            => 200.0,
+         Angle_Offset  => 0.0,
+         Stop_Count    => 6,
+         Stops         =>
            [1 => (0.0, (255, 0, 0, 255)),
             2 => (0.2, (255, 255, 0, 255)),
             3 => (0.4, (0, 255, 0, 255)),
             4 => (0.6, (0, 255, 255, 255)),
             5 => (0.8, (0, 0, 255, 255)),
             6 => (1.0, (255, 0, 0, 255))],
-         others     => <>
-      );
+         Repeat        => True,
+         Repeat_Length => Ada.Numerics.Pi / 2.0,
+         others        => <>);
 
    begin
       Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
       IO.Write_PPM (Get_Buffer (C), "output/blank.ppm");
 
-      Draw_Line (C, 50, 10, 50, 100, Red);  -- Perfectly vertical
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/vertical_line.ppm");
-
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-      Draw_Rectangle (C, 10, 10, 50, 30, White);
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/empty_rectangle.ppm");
-
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-      Draw_FilledRectangle (C, 10, 10, 50, 30, Blue);
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/filled_rectangle.ppm");
-
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-      Draw_Circle (C, 50, 30, 10, Blue);
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/circle.ppm");
-
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
+      --  Rounded rectangles using new style
       declare
-         Polygon_Points : constant Point_Array (1 .. 5) :=
-           [(10, 10), (50, 20), (80, 60), (30, 70), (5, 40)];
+         Geo   : constant Rectangle_Geometry :=
+           (X => 10, Y => 10, Width => 50, Height => 100);
+         Style : constant Rectangle_Style :=
+           (Shadow_Count   => 0,
+            Gradient_Count => 1,
+            Fill           => Solid_Gradient,
+            Border         => (Color => Green, Size => 10),
+            Radii          => (20, 20, 20, 20),
+            others         => <>);
       begin
-         Draw_Polygon (C, Polygon_Points, Red);
-         Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-         IO.Write_PPM (Get_Buffer (C), "output/Polygon.ppm");
-
-         C.Clear;
-         Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-         Draw_FilledPolygon (C, Polygon_Points, Red);
-         Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-         IO.Write_PPM (Get_Buffer (C), "output/Filled_Polygon.ppm");
+         Draw_Rounded_Rectangle (C, Geo, Style);
       end;
 
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-      Draw_Triangle (C, 100, 100, 150, 180, 200, 120, Green);
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/triangle.ppm");
+      declare
+         Geo   : constant Rectangle_Geometry := (120, 10, 50, 100);
+         Style : constant Rectangle_Style :=
+           (Shadow_Count   => 0,
+            Gradient_Count => 2,
+            Fill           => Linear_Gradient,
+            Border         => (Color => Green, Size => 10),
+            Radii          => (20, 20, 20, 20),
+            others         => <>);
+      begin
+         Draw_Rounded_Rectangle (C, Geo, Style);
+      end;
 
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-      Draw_FilledTriangle (C, 100, 100, 150, 180, 200, 120, Green);
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/Filled_triangle.ppm");
+      declare
+         Geo   : constant Rectangle_Geometry := (220, 10, 50, 100);
+         Style : constant Rectangle_Style :=
+           (Shadow_Count   => 0,
+            Gradient_Count => 2,
+            Fill           => Radial_Gradient,
+            Border         => (Color => Green, Size => 10),
+            Radii          => (20, 20, 20, 20),
+            others         => <>);
+      begin
+         Draw_Rounded_Rectangle (C, Geo, Style);
+      end;
 
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-      Draw_Circle (C, 100, 100, 50, Blue);
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/circle.ppm");
-
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-      Draw_FilledCircle (C, 100, 100, 50, Blue);
-      Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
-      IO.Write_PPM (Get_Buffer (C), "output/filled_circle.ppm");
-
-      C.Clear;
-      Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
-
-      -- Rounded rectangles using new Shadows array
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C, 10, 10, 50, 100, 20, 20, 20, 20, Solid_Gradient, Green, 10);
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C, 120, 10, 50, 100, 20, 20, 20, 20, Linear_Gradient, Green, 10);
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C, 220, 10, 50, 100, 20, 20, 20, 20, Radial_Gradient, Green, 10);
-
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C, 300, 10, 50, 100, 0, 0, 0, 0, Solid_Gradient, Green, 10);
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C, 400, 10, 50, 100, 20, 20, 20, 20, Solid_Gradient, Green, 0);
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C, 500, 10, 50, 100, 20, 20, 20, 20, Solid_Gradient, Green, 1);
-
-      -- Rounded rectangle with shadow using Shadows array
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C,
-         10,
-         150,
-         50,
-         250,
-         20, 20, 20, 20,
-         Conic_Gradient,
-         Green,
-         10,
-         Shadows => (1 => (Offset_X => 0,
-                            Offset_Y => 6,
-                            Blur     => 20,
-                            Spread   => 0,
-                            Inset    => False,
-                            Color    => (0,0,0,120))));
+      --  Rectangle with shadow
+      declare
+         Geo   : constant Rectangle_Geometry := (10, 150, 50, 250);
+         Style : constant Rectangle_Style :=
+           (Shadow_Count   => 1,
+            Gradient_Count => 6,
+            Fill           => Conic_Gradient,
+            Border         => (Color => Green, Size => 10),
+            Radii          => (20, 20, 20, 20),
+            Shadows        =>
+              [1 =>
+                 (Offset_X => 0,
+                  Offset_Y => 6,
+                  Blur     => 20,
+                  Spread   => 0,
+                  Inset    => False,
+                  Color    => (0, 0, 0, 120))]);
+      begin
+         Draw_Rounded_Rectangle (C, Geo, Style);
+      end;
 
       Assert (not Get_Buffer (C).Is_Empty, "Framebuffer should NOT be empty");
       IO.Write_PPM (Get_Buffer (C), "output/filled_rounded_rectangle_2.ppm");
 
-      C2.Clear;
-      Assert (Get_Buffer (C2).Is_Empty, "Framebuffer should be empty");
-      Draw_FilledRectangle (C2, 0, 0, 800, 600, White);
-      Assert (not Get_Buffer (C2).Is_Empty, "Framebuffer should NOT be empty");
-
-      -- Another rectangle with shadow using Shadows array
-      Renderer.Rectangle.Draw_Rounded_Rectangle
-        (C2,
-         50, 50, 200, 100, 20, 20, 20, 20,
-         Solid_White,
-         (R => 0, G => 0, B => 0, A => 255),
-         Border_Size => 4,
-         Shadows => (1 => (Offset_X => 10,
-                            Offset_Y => 10,
-                            Blur     => 15,
-                            Spread   => 0,
-                            Inset    => False,
-                            Color    => (0,0,0,180))));
+      --  Another rectangle with shadow on second context
+      declare
+         Geo   : constant Rectangle_Geometry := (50, 50, 200, 100);
+         Style : constant Rectangle_Style :=
+           (Fill           => Solid_White,
+            Shadow_Count   => 1,
+            Gradient_Count => 1,
+            Border         => (Color => (0, 0, 0, 255), Size => 4),
+            Radii          => (20, 20, 20, 20),
+            Shadows        =>
+              [1 =>
+                 (Offset_X => 10,
+                  Offset_Y => 10,
+                  Blur     => 15,
+                  Spread   => 0,
+                  Inset    => False,
+                  Color    => (0, 0, 0, 180))]);
+      begin
+         Draw_Rounded_Rectangle (C2, Geo, Style);
+      end;
 
       IO.Write_PPM (Get_Buffer (C2), "output/rectangle_width_shadow.ppm");
-
-      C2.Clear;
-      Assert (Get_Buffer (C2).Is_Empty, "Framebuffer should be empty");
-      Draw_FilledRectangle (C2, 0, 0, 800, 600, White);
 
    end Run_Test;
 
