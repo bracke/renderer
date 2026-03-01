@@ -241,151 +241,84 @@ end Rounded_Rect_Distance;
    --------------------------------------------------
    -- Draw Rounded Rectangle with Shadows
    --------------------------------------------------
-  procedure Draw_Rounded_Rectangle
-  (Context       : in out Render_Context;
-   X, Y          : Integer;
-   Width, Height : Natural;
-   Radius_TL, Radius_TR, Radius_BR, Radius_BL : Natural := 0;
-   Fill_Gradient : Gradient;
-   Border_Color  : Pixel;
-   Border_Size   : Natural := 0;
-   Shadows       : Shadow_Array := Empty_Shadow_Array) is
+procedure Draw_Rounded_Rectangle
+    (Context  : in out Render_Context;
+   Geometry : Rectangle_Geometry;
+   Style    : Rectangle_Style) is
+
+   -- Geometry unpacking
+   X      : constant Integer := Geometry.X;
+   Y      : constant Integer := Geometry.Y;
+   Width  : constant Natural := Geometry.Width;
+   Height : constant Natural := Geometry.Height;
+
+   -- Radii unpacking
+   Radius_TL : constant Natural := Style.Radii.TL;
+   Radius_TR : constant Natural := Style.Radii.TR;
+   Radius_BR : constant Natural := Style.Radii.BR;
+   Radius_BL : constant Natural := Style.Radii.BL;
+
+   -- Border unpacking
+   Border_Size : constant Natural := Style.Border.Size;
+   Border_F    : constant Float   := Float(Border_Size);
 
    Clip : constant Clip_Rectangle := Current_Clip_Rect(Context);
    AA_Width : constant Float := 1.0;
-   Border_F : constant Float := Float(Border_Size);
 
-   X_Start : constant Integer := Integer'Max(0, X - Integer(Border_Size) - 2);
-   Y_Start : constant Integer := Integer'Max(0, Y - Integer(Border_Size) - 2);
-   X_End   : constant Integer := Integer'Min(Integer(Context.Max_X), X + Integer(Width) + Integer(Border_Size) + 2);
-   Y_End   : constant Integer := Integer'Min(Integer(Context.Max_Y), Y + Integer(Height) + Integer(Border_Size) + 2);
+   X_Start : constant Integer :=
+     Integer'Max(0, X - Integer(Border_Size) - 2);
+
+   Y_Start : constant Integer :=
+     Integer'Max(0, Y - Integer(Border_Size) - 2);
+
+   X_End : constant Integer :=
+     Integer'Min(Integer(Context.Max_X),
+                 X + Integer(Width) + Integer(Border_Size) + 2);
+
+   Y_End : constant Integer :=
+     Integer'Min(Integer(Context.Max_Y),
+                 Y + Integer(Height) + Integer(Border_Size) + 2);
 
    X_Min : constant Integer := Integer'Max(X_Start, Clip.X_Min);
    Y_Min : constant Integer := Integer'Max(Y_Start, Clip.Y_Min);
    X_Max : constant Integer := Integer'Min(X_End,   Clip.X_Max);
    Y_Max : constant Integer := Integer'Min(Y_End,   Clip.Y_Max);
 
-   -- Alpha from distance helper
+   --------------------------------------------------
+   -- Distance → alpha helper
+   --------------------------------------------------
    function Alpha_From_Dist(Dist : Float) return Float is
    begin
       return Clamp(0.5 - Dist / AA_Width, 0.0, 1.0);
    end Alpha_From_Dist;
 
-   -- Shadow-aware SDF
-   function Rounded_Rect_Distance_Shadow(
-      PX, PY       : Float;
-      X, Y         : Integer;
-      Width, Height: Natural;
-      Radius_TL, Radius_TR, Radius_BR, Radius_BL: Natural;
-      Offset_X, Offset_Y : Float
-   ) return Float is
-      Local_X : Float := PX - Offset_X - Float(X);
-      Local_Y : Float := PY - Offset_Y - Float(Y);
-      DX, DY, AX, AY : Float;
-      R_TL, R_TR, R_BR, R_BL, R_Selected : Float;
-   begin
-      -- Clamp radii
-      R_TL := Clamp_Radius(Float(Radius_TL), Float(Width), Float(Height));
-      R_TR := Clamp_Radius(Float(Radius_TR), Float(Width), Float(Height));
-      R_BR := Clamp_Radius(Float(Radius_BR), Float(Width), Float(Height));
-      R_BL := Clamp_Radius(Float(Radius_BL), Float(Width), Float(Height));
-
-      -- Select corner radius
-      if Local_X < R_TL and Local_Y < R_TL then
-         R_Selected := R_TL;
-      elsif Local_X >= Float(Width) - R_TR and Local_Y < R_TR then
-         R_Selected := R_TR;
-      elsif Local_X >= Float(Width) - R_BR and Local_Y >= Float(Height) - R_BR then
-         R_Selected := R_BR;
-      elsif Local_X < R_BL and Local_Y >= Float(Height) - R_BL then
-         R_Selected := R_BL;
-      else
-         R_Selected := 0.0;
-      end if;
-
-      -- Compute SDF
-      DX := Abs(Local_X - Float(Width)/2.0) - Float(Width)/2.0 + R_Selected;
-      DY := Abs(Local_Y - Float(Height)/2.0) - Float(Height)/2.0 + R_Selected;
-      AX := Float'Max(DX, 0.0);
-      AY := Float'Max(DY, 0.0);
-
-      return Sqrt(AX*AX + AY*AY) + Float'Min(Float'Max(DX,DY),0.0) - R_Selected;
-   end Rounded_Rect_Distance_Shadow;
-
+   --------------------------------------------------
+   -- Rounded rectangle shadow procedure
+   --------------------------------------------------
 procedure Draw_Shadows is
    Temp_Alpha : array (X_Min .. X_Max, Y_Min .. Y_Max) of Float := (others => (others => 0.0));
    H_Buffer   : array (X_Min .. X_Max, Y_Min .. Y_Max) of Float := (others => (others => 0.0));
    Sum        : Float;
    SX, SY     : Integer;
-
-   -- Compute signed distance from rounded rectangle edge (correct for corners)
-   function Rounded_Rect_SDF(
-      PX, PY       : Float;
-      X, Y         : Integer;
-      Width, Height: Natural;
-      Radius_TL, Radius_TR, Radius_BR, Radius_BL: Natural;
-      Offset_X, Offset_Y: Float
-   ) return Float is
-      Local_X : Float := PX - Offset_X - Float(X);
-      Local_Y : Float := PY - Offset_Y - Float(Y);
-      DX, DY : Float;
-      Corner_Radius : Float := 0.0;
-   begin
-      -- Top-left corner
-      if Local_X < Float(Radius_TL) and Local_Y < Float(Radius_TL) then
-         Corner_Radius := Float(Radius_TL);
-         DX := Local_X - Corner_Radius;
-         DY := Local_Y - Corner_Radius;
-
-      -- Top-right corner
-      elsif Local_X >= Float(Width)-Float(Radius_TR) and Local_Y < Float(Radius_TR) then
-         Corner_Radius := Float(Radius_TR);
-         DX := Local_X - (Float(Width)-Corner_Radius);
-         DY := Local_Y - Corner_Radius;
-
-      -- Bottom-right corner
-      elsif Local_X >= Float(Width)-Float(Radius_BR) and Local_Y >= Float(Height)-Float(Radius_BR) then
-         Corner_Radius := Float(Radius_BR);
-         DX := Local_X - (Float(Width)-Corner_Radius);
-         DY := Local_Y - (Float(Height)-Corner_Radius);
-
-      -- Bottom-left corner
-      elsif Local_X < Float(Radius_BL) and Local_Y >= Float(Height)-Float(Radius_BL) then
-         Corner_Radius := Float(Radius_BL);
-         DX := Local_X - Corner_Radius;
-         DY := Local_Y - (Float(Height)-Corner_Radius);
-
-      -- Side or center region
-      else
-         DX := Float'Max(Float'Max(0.0, -Local_X), Local_X - Float(Width));
-         DY := Float'Max(Float'Max(0.0, -Local_Y), Local_Y - Float(Height));
-         Corner_Radius := 0.0;
-      end if;
-
-      return Sqrt(DX*DX + DY*DY) - Corner_Radius;
-   end Rounded_Rect_SDF;
-
 begin
-   for S in Shadows'Range loop
+   for S in Style.Shadows'Range loop
       declare
-         Shadow : constant Shadow_Params := Shadows(S);
+         Shadow : constant Shadow_Params := Style.Shadows(S);
          Kernel : constant Gaussian_Kernel := Build_Gaussian_Kernel(Shadow.Blur);
          Kernel_Center : constant Integer := Integer(Shadow.Blur);
       begin
-         -- Step 1: Compute alpha mask from SDF + spread
+         -- Step 1: Compute alpha mask from rectangle SDF + spread
          for PY in Y_Min .. Y_Max loop
             for PX in X_Min .. X_Max loop
                declare
-                  Dist : Float := Rounded_Rect_SDF(
-                                     Float(PX)+0.5,
-                                     Float(PY)+0.5,
-                                     X,Y,Width,Height,
-                                     Radius_TL,Radius_TR,Radius_BR,Radius_BL,
-                                     Float(Shadow.Offset_X),
-                                     Float(Shadow.Offset_Y));
+                  Dist  : Float := Rounded_Rect_Distance(
+                                    Float(PX) + 0.5 - Float(X) - Float(Shadow.Offset_X),
+                                    Float(PY) + 0.5 - Float(Y) - Float(Shadow.Offset_Y),
+                                    X, Y, Width, Height,
+                                    Radius_TL, Radius_TR, Radius_BR, Radius_BL);
                   Alpha : Float;
                begin
-                  -- Convert distance to alpha over full blur radius
+                  -- Convert distance to alpha using blur and spread
                   Alpha := Clamp((Float(Shadow.Blur) - Dist + Float(Shadow.Spread)) / Float(Shadow.Blur), 0.0, 1.0);
                   Temp_Alpha(PX,PY) := Alpha;
                end;
@@ -439,14 +372,13 @@ begin
       for PX in X_Min .. X_Max loop
          declare
             P : Pixel renames Context.The_Buffer(Natural(PX), Natural(PY));
-            Dist : Float := Rounded_Rect_Distance(
-                              Float(PX)+0.5, Float(PY)+0.5,
-                              X,Y,Width,Height,
-                              Radius_TL,Radius_TR,Radius_BR,Radius_BL);
+            Dist : Float := Rounded_Rect_Distance(Float(PX)+0.5, Float(PY)+0.5,
+                                                 X,Y,Width,Height,
+                                                 Radius_TL,Radius_TR,Radius_BR,Radius_BL);
             Alpha_Fill   : Float := Alpha_From_Dist(Dist);
             Alpha_Border : Float := 0.0;
          begin
-            -- Border alpha as a smooth ring
+            -- Border alpha
             if Border_Size > 0 then
                declare
                   Dist_Inner : Float := Dist;
@@ -458,12 +390,12 @@ begin
 
             -- Fill
             if Alpha_Fill > 0.0 then
-               Blend_Pixel(P, Sample_Gradient(Fill_Gradient, Float(PX)+0.5, Float(PY)+0.5), Alpha_Fill);
+               Blend_Pixel(P, Sample_Gradient(Style.Fill, Float(PX)+0.5, Float(PY)+0.5), Alpha_Fill);
             end if;
 
             -- Border
             if Alpha_Border > 0.0 then
-               Blend_Pixel(P, Border_Color, Alpha_Border);
+               Blend_Pixel(P, Style.Border.Color, Alpha_Border);
             end if;
          end;
       end loop;

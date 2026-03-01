@@ -101,3 +101,11 @@ If you want, I can make a diagram showing exactly which HTML form elements you c
  If you want, I can also update the Sample_Gradient and Interpolate_Color functions to avoid repeated declare blocks for further minor speedup. This would make the entire package fully optimized.
 
  If you want, I can also apply smoothstep to the border separately, so that borders have soft edges independently of fill, like modern CSS.
+
+ If you'd like next, we can:
+
+Merge Rounded_Rect_Distance to accept Corner_Radii directly
+
+Or refactor shadows to accept Rectangle_Geometry + Rectangle_Style
+
+Or make this fully object-oriented using tagged types

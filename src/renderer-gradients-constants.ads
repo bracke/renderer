@@ -10,6 +10,7 @@ package Renderer.Gradients.Constants is
    Solid_White       : constant Gradient := Solid (White);
    Solid_Black       : constant Gradient := Solid (Black);
    Solid_Gray        : constant Gradient := Solid (Gray);
+   Solid_Yellow      : constant Gradient := Solid (Yellow);
    Solid_Transparent : constant Gradient := Solid (Transparent);
 
    Linear_Red_Blue : constant Gradient :=
