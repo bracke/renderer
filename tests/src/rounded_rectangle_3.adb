@@ -129,6 +129,7 @@ package body Rounded_Rectangle_3 is
          Draw_Rounded_Rectangle (C, Geo, Style);
       end;
 
+      Clear_Rect (C2, 0, 0, 400, 400, Renderer.Colors.White);
       ------------------------------------------------------------
       --  C2 small rects
       ------------------------------------------------------------

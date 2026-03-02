@@ -73,9 +73,32 @@ package body Misc_Test is
          Repeat_Length => Ada.Numerics.Pi / 2.0,
          others        => <>);
 
+      procedure Clear_Rect
+        (Context : in out Render_Context;
+         X, Y    : Integer;
+         Width   : Natural;
+         Height  : Natural;
+         Color   : Pixel)
+      is
+         G     : constant Gradient := Solid (Color);
+         Geo   : constant Rectangle_Geometry :=
+           (X => X, Y => Y, Width => Width, Height => Height);
+         Style : constant Rectangle_Style :=
+           (Shadow_Count   => 0,
+            Gradient_Count => 1,
+            Fill           => G,
+            Border         => No_Border,
+            Radii          => (0, 0, 0, 0),
+            Shadows        => Empty_Shadow_Array);
+      begin
+         Draw_Rounded_Rectangle (Context, Geo, Style);
+      end Clear_Rect;
    begin
+
       Assert (Get_Buffer (C).Is_Empty, "Framebuffer should be empty");
       IO.Write_PPM (Get_Buffer (C), "output/blank.ppm");
+
+      Clear_Rect (C2, 0, 0, 600, 400, (255, 255, 255, 255));
 
       --  Rounded rectangles using new style
       declare
