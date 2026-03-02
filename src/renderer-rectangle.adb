@@ -3,9 +3,13 @@ pragma Extensions_Allowed (All_Extensions);
 
 with Ada.Numerics.Elementary_Functions; use Ada.Numerics.Elementary_Functions;
 with Ada.Numerics;                        use Ada.Numerics;
+with Ada.Text_IO;
 
 package body Renderer.Rectangle is
 
+type Alpha_Mask_Array is array (Integer range <>, Integer range <>) of Float;
+
+   procedure Log (Item : String) renames Ada.Text_IO.Put_Line;
    --------------------------------------------------
    -- Clamp function
    --------------------------------------------------
@@ -171,6 +175,52 @@ package body Renderer.Rectangle is
    begin
       return Float'Min(R, Float'Min(W/2.0, H/2.0));
    end Clamp_Radius;
+function Corner_Distance(PX, PY, X, Y, R : Float) return Float is
+   DX, DY : Float;
+begin
+   DX := PX - X;   -- Calculate horizontal distance
+   DY := PY - Y;   -- Calculate vertical distance
+   return Sqrt(DX*DX + DY*DY);  -- Return the Euclidean distance
+end Corner_Distance;
+ function Rounded_Rect_Distance_Shadows(
+   PX, PY       : Float;
+   X, Y         : Integer;
+   Width, Height: Natural;
+   Radius_TL, Radius_TR, Radius_BR, Radius_BL: Natural
+) return Float is
+   Local_X : Float := PX - Float(X);
+   Local_Y : Float := PY - Float(Y);
+   DX, DY, AX, AY : Float;
+   R_TL, R_TR, R_BR, R_BL, R_Selected : Float;
+begin
+   -- Clamp radii
+   R_TL := Clamp_Radius(Float(Radius_TL), Float(Width), Float(Height));
+   R_TR := Clamp_Radius(Float(Radius_TR), Float(Width), Float(Height));
+   R_BR := Clamp_Radius(Float(Radius_BR), Float(Width), Float(Height));
+   R_BL := Clamp_Radius(Float(Radius_BL), Float(Width), Float(Height));
+
+-- Inside the Rounded_Rect_Distance_Shadows function, modify the corner selection logic:
+if Corner_Distance(Local_X, Local_Y, Float(X) + R_TL, Float(Y) + R_TL, R_TL) < R_TL then
+   R_Selected := R_TL;
+elsif Corner_Distance(Local_X, Local_Y, Float(X) + Float(Width) - R_TR, Float(Y)  + R_TR, R_TR) < R_TR then
+   R_Selected := R_TR;
+elsif Corner_Distance(Local_X, Local_Y, Float(X) + Float(Width) - R_BR, Float(Y) + Float(Height) - R_BR, R_BR) < R_BR then
+   R_Selected := R_BR;
+elsif Corner_Distance(Local_X, Local_Y, Float(X) + R_BL, Float(Y) + Float(Height) - R_BL, R_BL) < R_BL then
+   R_Selected := R_BL;
+else
+   R_Selected := 0.0;  -- Straight edges
+end if;
+Ada.Text_IO.Put_Line("R_Selected: " & Float'Image(R_Selected));
+   -- Compute distance from rectangle edges with rounded corner
+   DX := Abs(Local_X - Float(Width)/2.0) - Float(Width)/2.0 + R_Selected;
+   DY := Abs(Local_Y - Float(Height)/2.0) - Float(Height)/2.0 + R_Selected;
+
+   AX := Float'Max(DX, 0.0);
+   AY := Float'Max(DY, 0.0);
+
+   return Sqrt(AX*AX + AY*AY) + Float'Min(Float'Max(DX,DY),0.0) - R_Selected;
+end Rounded_Rect_Distance_Shadows;
 
    --------------------------------------------------
    -- Rounded rectangle distance
@@ -238,6 +288,37 @@ end Rounded_Rect_Distance;
       return Kernel;
    end Build_Gaussian_Kernel;
 
+--------------------------------------------------
+-- Apply Gaussian Blur to shadow alpha values
+--------------------------------------------------
+procedure Apply_Blur_To_Alpha (Alpha : in out Float;
+                                PX, PY : Integer;
+                                Kernel : Gaussian_Kernel;
+                                Alpha_Mask : in Alpha_Mask_Array) is
+   Kernel_Size : constant Natural := Kernel'Length;
+   Half_Size : constant Integer := Kernel_Size / 2;
+   Sum : Float := 0.0;
+begin
+   -- Iterate over the surrounding pixels within the kernel's size
+   for KX in -Half_Size .. Half_Size loop
+      for KY in -Half_Size .. Half_Size loop
+         declare
+            New_PX : Integer := PX + KX;
+            New_PY : Integer := PY + KY;
+         begin
+            -- Check bounds to avoid accessing outside the buffer
+            if New_PX in Alpha_Mask'Range(1) and New_PY in Alpha_Mask'Range(2) then
+               -- Multiply alpha by the kernel weight
+               Sum := Sum + Kernel(Half_Size + KX) * Kernel(Half_Size + KY) * Alpha_Mask(New_PX, New_PY);
+            end if;
+         end;
+      end loop;
+   end loop;
+
+   -- Assign the blurred value to the current alpha
+   Alpha := Sum;
+end Apply_Blur_To_Alpha;
+
    --------------------------------------------------
    -- Draw Rounded Rectangle with Shadows
    --------------------------------------------------
@@ -292,76 +373,117 @@ procedure Draw_Rounded_Rectangle
       return Clamp(0.5 - Dist / AA_Width, 0.0, 1.0);
    end Alpha_From_Dist;
 
-   --------------------------------------------------
-   -- Rounded rectangle shadow procedure
-   --------------------------------------------------
+--------------------------------------------------
+-- Shadow rendering with Gaussian blur
+--------------------------------------------------
 procedure Draw_Shadows is
-   Temp_Alpha : array (X_Min .. X_Max, Y_Min .. Y_Max) of Float := (others => (others => 0.0));
-   H_Buffer   : array (X_Min .. X_Max, Y_Min .. Y_Max) of Float := (others => (others => 0.0));
-   Sum        : Float;
-   SX, SY     : Integer;
+   X_Min_Shadow : Integer := X_Min;
+   Y_Min_Shadow : Integer := Y_Min;
+   X_Max_Shadow : Integer := X_Max;
+   Y_Max_Shadow : Integer := Y_Max;
+   Kernel : Gaussian_Kernel := Build_Gaussian_Kernel(10); -- Radius of 10 for blur of 20
+   Kernel_Center : constant Integer := Kernel'Length / 2;
+
 begin
    for S in Style.Shadows'Range loop
       declare
          Shadow : constant Shadow_Params := Style.Shadows(S);
-         Kernel : constant Gaussian_Kernel := Build_Gaussian_Kernel(Shadow.Blur);
-         Kernel_Center : constant Integer := Integer(Shadow.Blur);
+         Greatest_Radius : constant Natural :=
+           Natural'Max(Natural'Max(Radius_TL, Radius_TR), Natural'Max(Radius_BR, Radius_BL));
+         Shadow_X : constant Integer := X + Shadow.Offset_X;
+         Shadow_Y : constant Integer := Y + Shadow.Offset_Y;
+         Spread_Adjustment : constant Integer := Shadow.Spread;
+
       begin
-         -- Step 1: Compute alpha mask from rectangle SDF + spread
-         for PY in Y_Min .. Y_Max loop
-            for PX in X_Min .. X_Max loop
-               declare
-                  Dist  : Float := Rounded_Rect_Distance(
-                                    Float(PX) + 0.5 - Float(X) - Float(Shadow.Offset_X),
-                                    Float(PY) + 0.5 - Float(Y) - Float(Shadow.Offset_Y),
-                                    X, Y, Width, Height,
-                                    Radius_TL, Radius_TR, Radius_BR, Radius_BL);
-                  Alpha : Float;
-               begin
-                  -- Convert distance to alpha using blur and spread
-                  Alpha := Clamp((Float(Shadow.Blur) - Dist + Float(Shadow.Spread)) / Float(Shadow.Blur), 0.0, 1.0);
-                  Temp_Alpha(PX,PY) := Alpha;
-               end;
-            end loop;
-         end loop;
+         -- Extend rendering bounds to include the blur
+         if Spread_Adjustment /= 0 then
+            X_Min_Shadow := Integer'Min(X_Min, Shadow_X - Kernel_Center - Spread_Adjustment);
+            Y_Min_Shadow := Integer'Min(Y_Min, Shadow_Y - Kernel_Center - Spread_Adjustment);
+            X_Max_Shadow := Integer'Max(X_Max, Shadow_X + Width + Kernel_Center + Spread_Adjustment);
+            Y_Max_Shadow := Integer'Max(Y_Max, Shadow_Y + Height + Kernel_Center + Spread_Adjustment);
+         else
+            X_Min_Shadow := Integer'Min(X_Min, Shadow_X - Kernel_Center);
+            Y_Min_Shadow := Integer'Min(Y_Min, Shadow_Y - Kernel_Center);
+            X_Max_Shadow := Integer'Max(X_Max, Shadow_X + Width + Kernel_Center);
+            Y_Max_Shadow := Integer'Max(Y_Max, Shadow_Y + Height + Kernel_Center);
+         end if;
 
-         -- Step 2: Horizontal Gaussian blur
-         for PY in Y_Min .. Y_Max loop
-            for PX in X_Min .. X_Max loop
-               Sum := 0.0;
-               for K in Kernel'Range loop
-                  SX := PX + Integer(K) - Kernel_Center;
-                  if SX >= X_Min and then SX <= X_Max then
-                     Sum := Sum + Temp_Alpha(SX,PY) * Kernel(K);
-                  end if;
-               end loop;
-               H_Buffer(PX,PY) := Sum;
-            end loop;
-         end loop;
+         X_Min_Shadow := Integer'Max(X_Min_Shadow, Context.The_Buffer'First(1));
+         Y_Min_Shadow := Integer'Max(Y_Min_Shadow, Context.The_Buffer'First(2));
+         X_Max_Shadow := Integer'Min(X_Max_Shadow, Context.The_Buffer'Last(1));
+         Y_Max_Shadow := Integer'Min(Y_Max_Shadow, Context.The_Buffer'Last(2));
 
-         -- Step 3: Vertical Gaussian blur + blend
-         for PY in Y_Min .. Y_Max loop
-            for PX in X_Min .. X_Max loop
-               Sum := 0.0;
-               for K in Kernel'Range loop
-                  SY := PY + Integer(K) - Kernel_Center;
-                  if SY >= Y_Min and then SY <= Y_Max then
-                     Sum := Sum + H_Buffer(PX,SY) * Kernel(K);
-                  end if;
-               end loop;
-
-               if Sum > 0.0 then
+         declare
+            Temp_Alpha : Alpha_Mask_Array(X_Min_Shadow .. X_Max_Shadow, Y_Min_Shadow .. Y_Max_Shadow);
+            H_Buffer : Alpha_Mask_Array(X_Min_Shadow .. X_Min_Shadow + (X_Max_Shadow - X_Min_Shadow),
+                            Y_Min_Shadow .. Y_Min_Shadow + (Y_Max_Shadow - Y_Min_Shadow));
+         begin
+            -- Step 1: Compute alpha mask from shadow SDF
+            for PY in Y_Min_Shadow .. Y_Max_Shadow loop
+               for PX in X_Min_Shadow .. X_Max_Shadow loop
                   declare
-                     P : Pixel renames Context.The_Buffer(Natural(PX), Natural(PY));
+                     Local_PX : Float := Float(PX) - Float(Shadow_X);
+                     Local_PY : Float := Float(PY) - Float(Shadow_Y);
+                     Dist : Float := Rounded_Rect_Distance(
+                        Local_PX + 0.5, Local_PY + 0.5,
+                        0, 0, Width, Height,
+                        Radius_TL, Radius_TR, Radius_BR, Radius_BL);
                   begin
-                     Blend_Pixel(P, Shadow.Color, Sum);
+                     Temp_Alpha(PX, PY) := 1.0 / (1.0 + Exp(10.0 * Dist));
                   end;
-               end if;
+               end loop;
             end loop;
-         end loop;
+
+            -- Step 2: Horizontal Gaussian blur
+            for PY in Y_Min_Shadow .. Y_Max_Shadow loop
+               for PX in X_Min_Shadow .. X_Max_Shadow loop
+                  declare
+                     Sum : Float := 0.0;
+                  begin
+                     for K in Kernel'Range loop
+                        declare
+                           SX : Integer := PX + (K - Kernel_Center);
+                        begin
+                           if SX >= X_Min_Shadow and SX <= X_Max_Shadow then
+                              Sum := Sum + Temp_Alpha(SX, PY) * Kernel(K);
+                           end if;
+                        end;
+                     end loop;
+                     H_Buffer(PX, PY) := Sum;
+                  end;
+               end loop;
+            end loop;
+
+            -- Step 3: Vertical Gaussian blur + blend
+            for PY in Y_Min_Shadow .. Y_Max_Shadow loop
+               for PX in X_Min_Shadow .. X_Max_Shadow loop
+                  declare
+                     Sum : Float := 0.0;
+                  begin
+                     for K in Kernel'Range loop
+                        declare
+                           SY : Integer := PY + (K - Kernel_Center);
+                        begin
+                           if SY >= Y_Min_Shadow and SY <= Y_Max_Shadow then
+                              Sum := Sum + H_Buffer(PX, SY) * Kernel(K);
+                           end if;
+                        end;
+                     end loop;
+                     if Sum > 0.0 and PX in Context.The_Buffer'Range(1) and PY in Context.The_Buffer'Range(2) then
+                        Blend_Pixel(Context.The_Buffer(Natural(PX), Natural(PY)), Shadow.Color, Sum);
+                     end if;
+                  end;
+               end loop;
+            end loop;
+         end;
       end;
    end loop;
 end Draw_Shadows;
+
+
+
+
+
 
 begin
    -- Draw shadows first
