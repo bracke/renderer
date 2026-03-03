@@ -34,7 +34,8 @@ package body Debug is
             ),
             Border => (Size => 0, Color => Black),
             Radii => (TL => 20, TR => 20, BR => 20, BL => 20),
-            Shadows => [1 => (Offset_X => 10, Offset_Y => 10, Blur => 20, Spread => 0, Color => Gray, Inset => False)]
+            Shadows =>
+            [1 => (Offset_X => 10, Offset_Y => 10, Blur => 20, Spread => 0, Color => Gray, Inset => True)]
          );
 
       procedure Clear_Rect

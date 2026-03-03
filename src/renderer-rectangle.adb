@@ -376,106 +376,211 @@ procedure Draw_Rounded_Rectangle
 --------------------------------------------------
 -- Shadow rendering with Gaussian blur
 --------------------------------------------------
-procedure Draw_Shadows is
-   X_Min_Shadow : Integer := X_Min;
-   Y_Min_Shadow : Integer := Y_Min;
-   X_Max_Shadow : Integer := X_Max;
-   Y_Max_Shadow : Integer := Y_Max;
-   Kernel : Gaussian_Kernel := Build_Gaussian_Kernel(10); -- Radius of 10 for blur of 20
+procedure Draw_Shadows(Inset : Boolean) is
+   Kernel : Gaussian_Kernel := Build_Gaussian_Kernel(10);
    Kernel_Center : constant Integer := Kernel'Length / 2;
-
 begin
    for S in Style.Shadows'Range loop
       declare
          Shadow : constant Shadow_Params := Style.Shadows(S);
-         Greatest_Radius : constant Natural :=
-           Natural'Max(Natural'Max(Radius_TL, Radius_TR), Natural'Max(Radius_BR, Radius_BL));
-         Shadow_X : constant Integer := X + Shadow.Offset_X;
-         Shadow_Y : constant Integer := Y + Shadow.Offset_Y;
+         Skip : Boolean := False;
+         Shadow_X, Shadow_Y : Integer;
+         X_Min_Shadow, Y_Min_Shadow, X_Max_Shadow, Y_Max_Shadow : Integer;
          Spread_Adjustment : constant Integer := Shadow.Spread;
-
       begin
-         -- Extend rendering bounds to include the blur
-         if Spread_Adjustment /= 0 then
-            X_Min_Shadow := Integer'Min(X_Min, Shadow_X - Kernel_Center - Spread_Adjustment);
-            Y_Min_Shadow := Integer'Min(Y_Min, Shadow_Y - Kernel_Center - Spread_Adjustment);
-            X_Max_Shadow := Integer'Max(X_Max, Shadow_X + Width + Kernel_Center + Spread_Adjustment);
-            Y_Max_Shadow := Integer'Max(Y_Max, Shadow_Y + Height + Kernel_Center + Spread_Adjustment);
+         -- Determine if this shadow applies to the current mode
+         if Inset and Shadow.Inset then
+            Shadow_X := X;
+            Shadow_Y := Y;
+         elsif not Inset and not Shadow.Inset then
+            Shadow_X := X + Shadow.Offset_X;
+            Shadow_Y := Y + Shadow.Offset_Y;
          else
-            X_Min_Shadow := Integer'Min(X_Min, Shadow_X - Kernel_Center);
-            Y_Min_Shadow := Integer'Min(Y_Min, Shadow_Y - Kernel_Center);
-            X_Max_Shadow := Integer'Max(X_Max, Shadow_X + Width + Kernel_Center);
-            Y_Max_Shadow := Integer'Max(Y_Max, Shadow_Y + Height + Kernel_Center);
+            Skip := True;
          end if;
 
-         X_Min_Shadow := Integer'Max(X_Min_Shadow, Context.The_Buffer'First(1));
-         Y_Min_Shadow := Integer'Max(Y_Min_Shadow, Context.The_Buffer'First(2));
-         X_Max_Shadow := Integer'Min(X_Max_Shadow, Context.The_Buffer'Last(1));
-         Y_Max_Shadow := Integer'Min(Y_Max_Shadow, Context.The_Buffer'Last(2));
-
-         declare
-            Temp_Alpha : Alpha_Mask_Array(X_Min_Shadow .. X_Max_Shadow, Y_Min_Shadow .. Y_Max_Shadow);
-            H_Buffer : Alpha_Mask_Array(X_Min_Shadow .. X_Min_Shadow + (X_Max_Shadow - X_Min_Shadow),
-                            Y_Min_Shadow .. Y_Min_Shadow + (Y_Max_Shadow - Y_Min_Shadow));
-         begin
-            -- Step 1: Compute alpha mask from shadow SDF
-            for PY in Y_Min_Shadow .. Y_Max_Shadow loop
-               for PX in X_Min_Shadow .. X_Max_Shadow loop
-                  declare
-                     Local_PX : Float := Float(PX) - Float(Shadow_X);
-                     Local_PY : Float := Float(PY) - Float(Shadow_Y);
-                     Dist : Float := Rounded_Rect_Distance(
-                        Local_PX + 0.5, Local_PY + 0.5,
-                        0, 0, Width, Height,
-                        Radius_TL, Radius_TR, Radius_BR, Radius_BL);
-                  begin
-                     Temp_Alpha(PX, PY) := 1.0 / (1.0 + Exp(10.0 * Dist));
-                  end;
-               end loop;
-            end loop;
-
-            -- Step 2: Horizontal Gaussian blur
-            for PY in Y_Min_Shadow .. Y_Max_Shadow loop
-               for PX in X_Min_Shadow .. X_Max_Shadow loop
-                  declare
-                     Sum : Float := 0.0;
-                  begin
-                     for K in Kernel'Range loop
+         if not Skip then
+            if Inset then
+               -- Draw inset shadow inside the rectangle, only on top and left sides
+               declare
+                  Temp_Alpha : Alpha_Mask_Array(X_Min .. X_Max, Y_Min .. Y_Max);
+                  H_Buffer   : Alpha_Mask_Array(X_Min .. X_Max, Y_Min .. Y_Max);
+               begin
+                  -- Step 1: Compute alpha mask for inset shadow
+                  for PY in Y_Min .. Y_Max loop
+                     for PX in X_Min .. X_Max loop
                         declare
-                           SX : Integer := PX + (K - Kernel_Center);
+                           FX : Float := Float(PX) + 0.5;
+                           FY : Float := Float(PY) + 0.5;
+                           Dist : Float := Rounded_Rect_Distance(FX, FY, X, Y, Width, Height,
+                                                                 Radius_TL, Radius_TR, Radius_BR, Radius_BL);
+                           Dist_Left : Float := FX - Float(X);
+                           Dist_Top : Float := FY - Float(Y);
+                           Inner_Dist_X : Float;
+                           Inner_Dist_Y : Float;
+                           Inner_Dist : Float := 0.0;
+                           Adjusted_Left : constant Float := Float(X) + Float(Spread_Adjustment);
+                           Adjusted_Top : constant Float := Float(Y) + Float(Spread_Adjustment);
+                           Adjusted_Right : constant Float := Float(X) + Float(Width) - Float(Spread_Adjustment);
+                           Adjusted_Bottom : constant Float := Float(Y) + Float(Height) - Float(Spread_Adjustment);
                         begin
-                           if SX >= X_Min_Shadow and SX <= X_Max_Shadow then
-                              Sum := Sum + Temp_Alpha(SX, PY) * Kernel(K);
+                           if Dist <= 0.0 then
+                              -- Only apply shadow on top and left sides
+                              if Dist_Left <= 20.0 or Dist_Top <= 20.0 then
+                                 -- Calculate inner distances with spread adjustment
+                                 Inner_Dist_X := Float'Min(Dist_Left, Adjusted_Right - FX);
+                                 Inner_Dist_Y := Float'Min(Dist_Top, Adjusted_Bottom - FY);
+
+                                 if Dist_Left <= 20.0 then
+                                    Inner_Dist := Inner_Dist_X;
+                                 elsif Dist_Top <= 20.0 then
+                                    Inner_Dist := Inner_Dist_Y;
+                                 end if;
+
+                                 if Inner_Dist < 0.0 then
+                                    Inner_Dist := 0.0;
+                                 end if;
+
+                                 Temp_Alpha(PX, PY) := 0.7 * (1.0 - 1.0 / (1.0 + Exp(5.0 * Inner_Dist)));
+                              else
+                                 Temp_Alpha(PX, PY) := 0.0;
+                              end if;
+                           else
+                              Temp_Alpha(PX, PY) := 0.0;
                            end if;
                         end;
                      end loop;
-                     H_Buffer(PX, PY) := Sum;
-                  end;
-               end loop;
-            end loop;
+                  end loop;
 
-            -- Step 3: Vertical Gaussian blur + blend
-            for PY in Y_Min_Shadow .. Y_Max_Shadow loop
-               for PX in X_Min_Shadow .. X_Max_Shadow loop
-                  declare
-                     Sum : Float := 0.0;
-                  begin
-                     for K in Kernel'Range loop
+                  -- Step 2: Horizontal Gaussian blur for inset shadow
+                  for PY in Y_Min .. Y_Max loop
+                     for PX in X_Min .. X_Max loop
                         declare
-                           SY : Integer := PY + (K - Kernel_Center);
+                           Sum : Float := 0.0;
                         begin
-                           if SY >= Y_Min_Shadow and SY <= Y_Max_Shadow then
-                              Sum := Sum + H_Buffer(PX, SY) * Kernel(K);
+                           for K in Kernel'Range loop
+                              declare
+                                 SX : Integer := PX + (K - Kernel_Center);
+                              begin
+                                 if SX >= X_Min and SX <= X_Max then
+                                    Sum := Sum + Temp_Alpha(SX, PY) * Kernel(K);
+                                 end if;
+                              end;
+                           end loop;
+                           H_Buffer(PX, PY) := Sum;
+                        end;
+                     end loop;
+                  end loop;
+
+                  -- Step 3: Vertical Gaussian blur + blend for inset shadow
+                  for PY in Y_Min .. Y_Max loop
+                     for PX in X_Min .. X_Max loop
+                        declare
+                           Sum : Float := 0.0;
+                        begin
+                           for K in Kernel'Range loop
+                              declare
+                                 SY : Integer := PY + (K - Kernel_Center);
+                              begin
+                                 if SY >= Y_Min and SY <= Y_Max then
+                                    Sum := Sum + H_Buffer(PX, SY) * Kernel(K);
+                                 end if;
+                              end;
+                           end loop;
+                           if Sum > 0.0 then
+                              Blend_Pixel(Context.The_Buffer(Natural(PX), Natural(PY)), Shadow.Color, Sum);
                            end if;
                         end;
                      end loop;
-                     if Sum > 0.0 and PX in Context.The_Buffer'Range(1) and PY in Context.The_Buffer'Range(2) then
-                        Blend_Pixel(Context.The_Buffer(Natural(PX), Natural(PY)), Shadow.Color, Sum);
-                     end if;
-                  end;
-               end loop;
-            end loop;
-         end;
+                  end loop;
+               end;
+            else
+               -- Regular shadow (drop shadow) with Gaussian blur
+               X_Min_Shadow := Integer'Max(Context.The_Buffer'First(1), Shadow_X - Kernel_Center - Spread_Adjustment);
+               Y_Min_Shadow := Integer'Max(Context.The_Buffer'First(2), Shadow_Y - Kernel_Center - Spread_Adjustment);
+               X_Max_Shadow := Integer'Min(Context.The_Buffer'Last(1), Shadow_X + Width + Kernel_Center + Spread_Adjustment);
+               Y_Max_Shadow := Integer'Min(Context.The_Buffer'Last(2), Shadow_Y + Height + Kernel_Center + Spread_Adjustment);
+
+               -- Temporary alpha mask
+               declare
+                  Temp_Alpha : Alpha_Mask_Array(X_Min_Shadow .. X_Max_Shadow, Y_Min_Shadow .. Y_Max_Shadow);
+                  H_Buffer   : Alpha_Mask_Array(X_Min_Shadow .. X_Max_Shadow, Y_Min_Shadow .. Y_Max_Shadow);
+                  V_Buffer   : Alpha_Mask_Array(X_Min_Shadow .. X_Max_Shadow, Y_Min_Shadow .. Y_Max_Shadow);
+                  Spread_Width : constant Integer := Width + 2 * Spread_Adjustment;
+                  Spread_Height : constant Integer := Height + 2 * Spread_Adjustment;
+               begin
+                  -- Step 1: Compute alpha from shadow SDF
+                  for PY in Y_Min_Shadow .. Y_Max_Shadow loop
+                     for PX in X_Min_Shadow .. X_Max_Shadow loop
+                        declare
+                           Local_PX : Float := Float(PX) - Float(Shadow_X);
+                           Local_PY : Float := Float(PY) - Float(Shadow_Y);
+                           Dist : Float;
+                        begin
+                           Dist := Rounded_Rect_Distance(
+                              Local_PX + 0.5,
+                              Local_PY + 0.5,
+                              -Spread_Adjustment,
+                              -Spread_Adjustment,
+                              Spread_Width,
+                              Spread_Height,
+                              Radius_TL, Radius_TR, Radius_BR, Radius_BL);
+                           Temp_Alpha(PX, PY) := 1.0 / (1.0 + Exp(10.0 * Dist));
+                        end;
+                     end loop;
+                  end loop;
+
+                  -- Step 2: Horizontal blur
+                  for PY in Y_Min_Shadow .. Y_Max_Shadow loop
+                     for PX in X_Min_Shadow .. X_Max_Shadow loop
+                        declare
+                           Sum : Float := 0.0;
+                        begin
+                           for K in Kernel'Range loop
+                              declare
+                                 SX : Integer := PX + (K - Kernel_Center);
+                              begin
+                                 if SX >= X_Min_Shadow and SX <= X_Max_Shadow then
+                                    Sum := Sum + Temp_Alpha(SX, PY) * Kernel(K);
+                                 end if;
+                              end;
+                           end loop;
+                           H_Buffer(PX, PY) := Sum;
+                        end;
+                     end loop;
+                  end loop;
+
+                  -- Step 3: Vertical blur
+                  for PY in Y_Min_Shadow .. Y_Max_Shadow loop
+                     for PX in X_Min_Shadow .. X_Max_Shadow loop
+                        declare
+                           Sum : Float := 0.0;
+                        begin
+                           for K in Kernel'Range loop
+                              declare
+                                 SY : Integer := PY + (K - Kernel_Center);
+                              begin
+                                 if SY >= Y_Min_Shadow and SY <= Y_Max_Shadow then
+                                    Sum := Sum + H_Buffer(PX, SY) * Kernel(K);
+                                 end if;
+                              end;
+                           end loop;
+                           V_Buffer(PX, PY) := Sum;
+                        end;
+                     end loop;
+                  end loop;
+
+                  -- Step 4: Blend the blurred shadow
+                  for PY in Y_Min_Shadow .. Y_Max_Shadow loop
+                     for PX in X_Min_Shadow .. X_Max_Shadow loop
+                        if V_Buffer(PX, PY) > 0.0 and PX in Context.The_Buffer'Range(1) and PY in Context.The_Buffer'Range(2) then
+                           Blend_Pixel(Context.The_Buffer(Natural(PX), Natural(PY)), Shadow.Color, V_Buffer(PX, PY));
+                        end if;
+                     end loop;
+                  end loop;
+               end;
+            end if;
+         end if; -- not Skip
       end;
    end loop;
 end Draw_Shadows;
@@ -485,22 +590,41 @@ end Draw_Shadows;
 
 
 
-begin
-   -- Draw shadows first
-   Draw_Shadows;
 
-   -- Draw rectangle fill and border
+begin
+    -- Draw non-inset shadows first
+   Draw_Shadows(inset => False);
+
+   -- Draw rectangle fill
    for PY in Y_Min .. Y_Max loop
       for PX in X_Min .. X_Max loop
          declare
             P : Pixel renames Context.The_Buffer(Natural(PX), Natural(PY));
             Dist : Float := Rounded_Rect_Distance(Float(PX)+0.5, Float(PY)+0.5,
-                                                 X,Y,Width,Height,
-                                                 Radius_TL,Radius_TR,Radius_BR,Radius_BL);
-            Alpha_Fill   : Float := Alpha_From_Dist(Dist);
+                                                  X, Y, Width, Height,
+                                                  Radius_TL, Radius_TR, Radius_BR, Radius_BL);
+            Alpha_Fill : Float := Alpha_From_Dist(Dist);
+         begin
+            if Alpha_Fill > 0.0 then
+               Blend_Pixel(P, Sample_Gradient(Style.Fill, Float(PX)+0.5, Float(PY)+0.5), Alpha_Fill);
+            end if;
+         end;
+      end loop;
+   end loop;
+
+   -- Draw inset shadows after the fill
+   Draw_Shadows(inset => True);
+
+   -- Draw rectangle border
+   for PY in Y_Min .. Y_Max loop
+      for PX in X_Min .. X_Max loop
+         declare
+            P : Pixel renames Context.The_Buffer(Natural(PX), Natural(PY));
+            Dist : Float := Rounded_Rect_Distance(Float(PX)+0.5, Float(PY)+0.5,
+                                                  X, Y, Width, Height,
+                                                  Radius_TL, Radius_TR, Radius_BR, Radius_BL);
             Alpha_Border : Float := 0.0;
          begin
-            -- Border alpha
             if Border_Size > 0 then
                declare
                   Dist_Inner : Float := Dist;
@@ -508,16 +632,9 @@ begin
                begin
                   Alpha_Border := Clamp(Alpha_From_Dist(Dist_Outer) - Alpha_From_Dist(Dist_Inner), 0.0, 1.0);
                end;
-            end if;
-
-            -- Fill
-            if Alpha_Fill > 0.0 then
-               Blend_Pixel(P, Sample_Gradient(Style.Fill, Float(PX)+0.5, Float(PY)+0.5), Alpha_Fill);
-            end if;
-
-            -- Border
-            if Alpha_Border > 0.0 then
-               Blend_Pixel(P, Style.Border.Color, Alpha_Border);
+               if Alpha_Border > 0.0 then
+                  Blend_Pixel(P, Style.Border.Color, Alpha_Border);
+               end if;
             end if;
          end;
       end loop;
